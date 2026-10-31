@@ -12,7 +12,7 @@ let state = {
 };
 
 let soundEnabled = localStorage.getItem('pozisyon_sound') !== 'false';
-let myNickname = localStorage.getItem('pozisyon_nickname') || 'Öğrenci ' + Math.floor(10 + Math.random() * 90);
+let myNickname = localStorage.getItem('pozisyon_nickname') || '';
 let audioCtx = null;
 
 // ==================== TEMA YÖNETİMİ ====================
@@ -550,14 +550,54 @@ function resetAllPrompt() {
   }
 }
 
-function changeNicknamePrompt() {
-  const newName = prompt('Görünecek kullanıcı adınız:', myNickname);
-  if (newName && newName.trim()) {
-    myNickname = newName.trim().substring(0, 20);
-    localStorage.setItem('pozisyon_nickname', myNickname);
-    const display = document.getElementById('user-nickname-display');
-    if (display) display.textContent = myNickname;
+function checkNicknameOnLoad() {
+  const saved = localStorage.getItem('pozisyon_nickname');
+  if (!saved || !saved.trim()) {
+    openNicknameModal();
+  } else {
+    myNickname = saved.trim();
+    updateNicknameDisplay();
   }
+}
+
+function openNicknameModal() {
+  const modal = document.getElementById('nickname-modal');
+  const input = document.getElementById('nickname-modal-input');
+  if (modal) modal.classList.add('open');
+  if (input) {
+    input.value = myNickname || '';
+    setTimeout(() => input.focus(), 150);
+  }
+}
+
+function closeNicknameModal(useDefaultIfEmpty = false) {
+  const modal = document.getElementById('nickname-modal');
+  if (modal) modal.classList.remove('open');
+  if (useDefaultIfEmpty && (!myNickname || !myNickname.trim())) {
+    myNickname = 'Öğrenci ' + Math.floor(10 + Math.random() * 90);
+    localStorage.setItem('pozisyon_nickname', myNickname);
+    updateNicknameDisplay();
+  }
+}
+
+function saveNicknameFromModal(e) {
+  if (e) e.preventDefault();
+  const input = document.getElementById('nickname-modal-input');
+  if (input && input.value.trim()) {
+    myNickname = input.value.trim().substring(0, 20);
+    localStorage.setItem('pozisyon_nickname', myNickname);
+    updateNicknameDisplay();
+    closeNicknameModal(false);
+  }
+}
+
+function updateNicknameDisplay() {
+  const display = document.getElementById('user-nickname-display');
+  if (display) display.textContent = myNickname || 'Sen';
+}
+
+function changeNicknamePrompt() {
+  openNicknameModal();
 }
 
 function toggleBossMode() {
@@ -708,8 +748,7 @@ function escapeHtml(str) {
 
 window.addEventListener('DOMContentLoaded', () => {
   initTheme();
-  const display = document.getElementById('user-nickname-display');
-  if (display) display.textContent = myNickname;
+  checkNicknameOnLoad();
 
   const soundStatus = document.getElementById('sound-status-text');
   if (soundStatus) soundStatus.textContent = soundEnabled ? 'AÇIK' : 'KAPALI';
