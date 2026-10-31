@@ -970,6 +970,32 @@
     </div>
   </div>
 
+  <!-- ==================== GİRİŞ / KULLANICI ADI MODALI ==================== -->
+  <div id="nickname-modal" class="modal-backdrop">
+    <div class="modal-box" style="max-width:390px;">
+      <div class="modal-header">
+        <span>// JÜRİ ARENASINA GİRİŞ</span>
+      </div>
+
+      <p style="font-size:11px;margin-bottom:12px;opacity:0.85;line-height:1.5;">
+        Canlı jüri sayacına hoş geldin! Pozisyon sayarken ve tahminde bulunurken sınıfta görünecek adını veya lakabını yaz:
+      </p>
+
+      <form onsubmit="saveNicknameFromModal(event)">
+        <input type="text" id="nickname-modal-input" placeholder="Adın veya Lakabın (Örn: Demir)" maxlength="20" required class="input-field" style="font-size:12px;padding:10px;margin-bottom:12px;">
+        
+        <div style="display:flex;justify-content:flex-end;gap:8px;">
+          <button type="button" onclick="closeNicknameModal(true)" class="btn-action" style="padding:6px 12px;font-size:11px;">
+            Anonim Kal
+          </button>
+          <button type="submit" class="btn-action" style="padding:6px 16px;font-size:11px;border-color:var(--blue);background:var(--blue);color:#fff;font-weight:bold;">
+            BAŞLA &gt;
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script src="/app.js"></script>
 </body>
 </html>
