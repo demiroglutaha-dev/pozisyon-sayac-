@@ -780,13 +780,23 @@
 
           <!-- BÜYÜK POZİSYON BUTONU -->
           <div class="action-arena" id="action-arena">
-            <div id="combo-pill" class="combo-pill" style="display:none;">
-              [ KOMBO 3x // ARDIŞIK SERİ ]
+            <div style="display:flex;justify-content:space-between;align-items:center;width:100%;max-width:360px;margin-bottom:8px;">
+              <div id="combo-pill" class="combo-pill" style="display:none;margin-bottom:0;">
+                [ KOMBO 3x // ARDIŞIK SERİ ]
+              </div>
+              <button id="consensus-toggle-btn" onclick="toggleConsensusMode()" class="btn-action" style="font-size:10px;padding:3px 8px;border-color:var(--line);margin-left:auto;" title="2 kişinin peş peşe basmasını şart koşar">
+                KONSENSÜS: <span id="consensus-status-text" style="color:var(--blue);font-weight:bold;">2 KİŞİ ONAYI</span>
+              </button>
+            </div>
+
+            <!-- Konsensüs Bildirim Çubuğu -->
+            <div id="consensus-banner" style="display:none;width:100%;max-width:360px;margin-bottom:10px;padding:8px 10px;border:1px solid #D97706;background:rgba(217,119,6,0.12);color:#D97706;font-size:11px;text-align:center;font-weight:bold;letter-spacing:0.5px;">
+              <span id="consensus-text">[ 1/2 ONAY ] BİRİ BASTI! (Doğrulamak için tıkla!)</span>
             </div>
 
             <button id="btn-pozisyon" class="btn-pozisyon-main" onclick="triggerPozisyon(1)">
               POZİSYON
-              <span class="sub-lbl">[ +1 SAYAC // SPACE ]</span>
+              <span class="sub-lbl" id="btn-pozisyon-sublbl">[ +1 SAYAC // SPACE ]</span>
             </button>
 
             <!-- Hızlı Aksiyon Butonları -->
@@ -809,6 +819,12 @@
           <!-- TAHMİN / BAHİS BÖLÜMÜ -->
           <div style="border-top:1px dashed var(--line);padding-top:12px;margin-top:10px;">
             <div class="eyebrow">TAHMİN // BU JÜRİDE KAÇ POZİSYON OLUR?</div>
+            
+            <!-- Günün Kahini Sonuç Rozeti -->
+            <div id="oracle-banner" style="display:none;margin-bottom:10px;padding:8px 10px;border:1px solid #8B5CF6;background:rgba(139,92,246,0.12);color:#8B5CF6;font-size:11px;line-height:1.4;">
+              <strong>🔮 GÜNÜN KAHİNİ:</strong> <span id="oracle-winner-text">-</span>
+            </div>
+
             <div class="prediction-row">
               <input type="number" id="prediction-input" placeholder="Tahmin (Örn: 8)" class="input-field" style="width:140px;">
               <button class="btn-action" onclick="submitPrediction()" style="border-color:var(--blue);color:var(--blue);font-weight:bold;">
@@ -868,6 +884,14 @@
             <div>TOPLAM: <strong class="text-blue" id="stat-total-val">0</strong></div>
             <div>ORTALAMA: <strong id="stat-avg-val">0.0</strong></div>
             <div>ÖĞRENCİ: <strong id="stat-students-count">35</strong></div>
+          </div>
+
+          <!-- KAHİNLER LİGİ (TAHMİN ŞAMPİYONLARI) -->
+          <div id="oracle-leaderboard-box" style="margin-top:10px;padding-top:8px;border-top:1px dashed var(--line);font-size:10px;display:flex;align-items:center;gap:6px;overflow-x:auto;">
+            <span style="color:#8B5CF6;font-weight:bold;white-space:nowrap;">🔮 KAHİNLER:</span>
+            <div id="oracle-top-list" style="display:flex;gap:6px;overflow-x:auto;">
+              <span style="opacity:0.6;font-style:italic;">Henüz jüri sonuçlanmadı</span>
+            </div>
           </div>
         </div>
 
