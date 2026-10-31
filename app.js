@@ -17,9 +17,13 @@ let audioCtx = null;
 
 // ==================== TEMA YÖNETİMİ ====================
 function initTheme() {
-  const isDark = localStorage.getItem('pozisyon_dark_theme') === 'true';
+  const saved = localStorage.getItem('pozisyon_dark_theme');
+  // Varsayılan olarak KOYU TEMA (Dark Mode)
+  const isDark = saved === null ? true : saved === 'true';
   if (isDark) {
     document.body.classList.add('dark-mode');
+  } else {
+    document.body.classList.remove('dark-mode');
   }
 }
 
