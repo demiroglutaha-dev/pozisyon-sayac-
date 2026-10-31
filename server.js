@@ -17,7 +17,26 @@ const DB_FILE = path.join(DATA_DIR, 'db.json');
 
 app.use(cors());
 app.use(express.json());
+
+// Farklı klasör yapılarına karşı toleranslı statik sunucu
 app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(__dirname));
+app.use('/public', express.static(path.join(__dirname, 'public')));
+
+app.get('/', (req, res) => {
+  const possiblePaths = [
+    path.join(__dirname, 'public', 'index.html'),
+    path.join(__dirname, 'index.html'),
+    path.join(__dirname, 'pozsyon sayacı', 'public', 'index.html'),
+    path.join(__dirname, 'pozsyon sayacı', 'index.html')
+  ];
+  for (const p of possiblePaths) {
+    if (fs.existsSync(p)) {
+      return res.sendFile(p);
+    }
+  }
+  res.status(404).send('index.html dosyası bulunamadı. Lütfen GitHub reposundaki dosya yollarını kontrol edin.');
+});
 
 // Yerel Ağ IP Tespiti
 function getLocalIp() {
