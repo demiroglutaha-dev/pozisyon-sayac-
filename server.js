@@ -92,6 +92,8 @@ function loadDatabase() {
     try {
       const data = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
       if (data && data.students && Array.isArray(data.students)) {
+        if (data.consensusMode === undefined) data.consensusMode = true;
+        if (!data.oracleLeaderboard) data.oracleLeaderboard = {};
         return data;
       }
     } catch (e) {
@@ -109,6 +111,10 @@ function loadDatabase() {
     comboStreak: 0,
     lastClickTimestamp: 0,
     recentClicks: [],
+    consensusMode: true,
+    consensusPending: null,
+    oracleLeaderboard: {},
+    lastOracle: null,
     students: defaultStudents
   };
 
@@ -117,6 +123,7 @@ function loadDatabase() {
 }
 
 let db = loadDatabase();
+let consensusTimer = null;
 
 function saveDatabase(dataToSave) {
   try {
@@ -136,6 +143,48 @@ function broadcast(message) {
       client.send(payload);
     }
   });
+}
+
+// Kahin (Tahmin) Sonucunu Hesapla
+function resolveOracle(student) {
+  if (!student || !student.predictions || student.predictions.length === 0) return null;
+
+  const actual = student.count;
+  let bestDiff = Infinity;
+  student.predictions.forEach(p => {
+    const diff = Math.abs(p.guess - actual);
+    if (diff < bestDiff) bestDiff = diff;
+  });
+
+  const winners = student.predictions.filter(p => Math.abs(p.guess - actual) === bestDiff);
+  if (winners.length === 0) return null;
+
+  if (!db.oracleLeaderboard) db.oracleLeaderboard = {};
+  winners.forEach(w => {
+    db.oracleLeaderboard[w.user] = (db.oracleLeaderboard[w.user] || 0) + 1;
+  });
+
+  const oracleResult = {
+    studentName: student.name,
+    actualCount: actual,
+    bestDiff: bestDiff,
+    winners: winners.map(w => ({
+      user: w.user,
+      guess: w.guess,
+      exact: w.guess === actual
+    }))
+  };
+
+  db.lastOracle = oracleResult;
+  saveDatabase();
+
+  broadcast({
+    type: 'ORACLE_ANNOUNCED',
+    result: oracleResult,
+    oracleLeaderboard: db.oracleLeaderboard
+  });
+
+  return oracleResult;
 }
 
 // 1 Saniyelik Kronometre Tick
@@ -188,11 +237,121 @@ function handleAction(action) {
   const userName = (action.userName || 'Anonim').trim().substring(0, 25);
 
   switch (action.type) {
+    case 'TOGGLE_CONSENSUS_MODE': {
+      db.consensusMode = !db.consensusMode;
+      db.consensusPending = null;
+      if (consensusTimer) {
+        clearTimeout(consensusTimer);
+        consensusTimer = null;
+      }
+      saveDatabase();
+      broadcast({
+        type: 'STATE_UPDATED',
+        state: db
+      });
+      break;
+    }
+
     case 'POZISYON_CLICK': {
       const amount = Number(action.amount) || 1;
       const student = db.students.find(s => s.id === db.activeStudentId);
       if (!student) return;
 
+      // ================= KONSENSÜS (2 KİŞİ ONAYI) MODU =================
+      if (db.consensusMode && amount === 1) {
+        if (!db.consensusPending) {
+          // 1. KİŞİ BASTI -> Onay Bekleniyor
+          db.consensusPending = {
+            initiatedBy: userName,
+            studentId: student.id,
+            amount: 1,
+            timestamp: now,
+            expiresAt: now + 3500
+          };
+
+          if (consensusTimer) clearTimeout(consensusTimer);
+          consensusTimer = setTimeout(() => {
+            if (db.consensusPending) {
+              const expiredUser = db.consensusPending.initiatedBy;
+              db.consensusPending = null;
+              broadcast({
+                type: 'CONSENSUS_EXPIRED',
+                initiatedBy: expiredUser
+              });
+            }
+          }, 3500);
+
+          broadcast({
+            type: 'CONSENSUS_WAITING',
+            initiatedBy: userName,
+            studentName: student.name,
+            expiresInMs: 3500
+          });
+          return;
+        } else {
+          // 1. Onay Zaten Var -> 2. Kişi Kontrolü
+          // Aynı kişi ikinci kez basamaz (troll koruması)
+          if (db.consensusPending.initiatedBy.toLowerCase() === userName.toLowerCase()) {
+            return;
+          }
+
+          // 2. FARKLI KİŞİ ONAYLADI -> SAYI EKLENİR!
+          if (consensusTimer) {
+            clearTimeout(consensusTimer);
+            consensusTimer = null;
+          }
+
+          const firstUser = db.consensusPending.initiatedBy;
+          db.consensusPending = null;
+
+          if (now - db.lastClickTimestamp < 3500) {
+            db.comboStreak += 1;
+          } else {
+            db.comboStreak = 1;
+          }
+          db.lastClickTimestamp = now;
+
+          student.count = Math.max(0, student.count + 1);
+          db.totalPositionCount = Math.max(0, db.totalPositionCount + 1);
+
+          const logItem = {
+            id: 'log_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+            timestamp: now,
+            by: `${firstUser} & ${userName}`,
+            studentName: student.name,
+            amount: 1,
+            combo: db.comboStreak,
+            totalNow: student.count,
+            consensus: true
+          };
+
+          if (!student.history) student.history = [];
+          student.history.unshift(logItem);
+          if (student.history.length > 50) student.history.pop();
+
+          if (!db.recentClicks) db.recentClicks = [];
+          db.recentClicks.unshift(logItem);
+          if (db.recentClicks.length > 25) db.recentClicks.pop();
+
+          saveDatabase();
+
+          broadcast({
+            type: 'CONSENSUS_CONFIRMED',
+            firstUser: firstUser,
+            secondUser: userName,
+            by: `${firstUser} & ${userName}`,
+            amount: 1,
+            combo: db.comboStreak,
+            studentId: student.id,
+            newStudentCount: student.count,
+            totalPositionCount: db.totalPositionCount,
+            logItem: logItem
+          });
+          return;
+        }
+      }
+
+      // ================= KLASİK MOD VEYA +5 SERİ =================
       if (now - db.lastClickTimestamp < 3500) {
         db.comboStreak += 1;
       } else {
@@ -243,6 +402,7 @@ function handleAction(action) {
       student.count -= 1;
       db.totalPositionCount = Math.max(0, db.totalPositionCount - 1);
       db.comboStreak = 0;
+      db.consensusPending = null;
 
       const logItem = {
         id: 'log_' + Date.now(),
@@ -279,11 +439,17 @@ function handleAction(action) {
       const targetStudent = db.students.find(s => s.id === targetId);
       if (!targetStudent) return;
 
-      if (db.juryRunning && db.activeStudentId) {
-        const prev = db.students.find(s => s.id === db.activeStudentId);
-        if (prev && db.juryStartTime) {
-          const sessionSec = Math.floor((now - db.juryStartTime) / 1000);
-          prev.durationSeconds = (prev.durationSeconds || 0) + sessionSec;
+      // Önceki öğrenci için tahminleri sonuçlandır
+      if (db.activeStudentId && db.activeStudentId !== targetId) {
+        const prevStudent = db.students.find(s => s.id === db.activeStudentId);
+        if (prevStudent) {
+          if (db.juryRunning && db.juryStartTime) {
+            const sessionSec = Math.floor((now - db.juryStartTime) / 1000);
+            prevStudent.durationSeconds = (prevStudent.durationSeconds || 0) + sessionSec;
+          }
+          if (prevStudent.count > 0 || (prevStudent.predictions && prevStudent.predictions.length > 0)) {
+            resolveOracle(prevStudent);
+          }
         }
       }
 
@@ -300,6 +466,7 @@ function handleAction(action) {
         db.juryStartTime = now;
       }
       db.comboStreak = 0;
+      db.consensusPending = null;
 
       saveDatabase();
 
@@ -311,8 +478,9 @@ function handleAction(action) {
     }
 
     case 'TOGGLE_JURY_TIMER': {
+      const student = db.students.find(s => s.id === db.activeStudentId);
+
       if (db.juryRunning) {
-        const student = db.students.find(s => s.id === db.activeStudentId);
         if (student && db.juryStartTime) {
           const sessionSec = Math.floor((now - db.juryStartTime) / 1000);
           student.durationSeconds = (student.durationSeconds || 0) + sessionSec;
@@ -320,10 +488,14 @@ function handleAction(action) {
         }
         db.juryRunning = false;
         db.juryStartTime = null;
+
+        // Jüri bitti: Günün Kahini Sonucunu İlan Et!
+        if (student) {
+          resolveOracle(student);
+        }
       } else {
         db.juryRunning = true;
         db.juryStartTime = now;
-        const student = db.students.find(s => s.id === db.activeStudentId);
         if (student) {
           student.status = 'active';
         }
@@ -375,6 +547,7 @@ function handleAction(action) {
     }
 
     case 'RESET_ALL': {
+      if (action.pin !== '1816') return;
       db.students.forEach(s => {
         s.count = 0;
         s.durationSeconds = 0;
@@ -391,6 +564,9 @@ function handleAction(action) {
       db.juryRunning = false;
       db.juryStartTime = null;
       db.recentClicks = [];
+      db.consensusPending = null;
+      db.lastOracle = null;
+      db.oracleLeaderboard = {};
 
       saveDatabase();
       broadcast({ type: 'STATE_UPDATED', state: db });
