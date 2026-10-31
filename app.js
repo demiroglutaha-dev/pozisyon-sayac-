@@ -308,10 +308,8 @@ function renderAll() {
   renderStudentsList();
   renderQuickSelect();
   renderActivityStream();
-  renderPredictions();
   renderConsensusStatus();
-  renderOracleBanner();
-  renderOracleLeaderboard();
+  renderGlobalPredictions();
   updateTimerDisplay();
 }
 
@@ -332,33 +330,85 @@ function renderConsensusStatus() {
   }
 }
 
-function renderOracleBanner() {
-  const banner = document.getElementById('oracle-banner');
-  const text = document.getElementById('oracle-winner-text');
-  if (!banner || !text) return;
-  if (state.lastOracle && state.lastOracle.winners && state.lastOracle.winners.length > 0) {
-    banner.style.display = 'block';
-    const winnersStr = state.lastOracle.winners.map(w => `<strong>${escapeHtml(w.user)}</strong> (${w.guess} PZ${w.exact ? ' - TAM İSABET!' : ''})`).join(', ');
-    text.innerHTML = `"${escapeHtml(state.lastOracle.studentName)}" için gerçek sonuç <strong>${state.lastOracle.actualCount} PZ</strong> oldu. En yakın tahmin: ${winnersStr}`;
-  } else {
-    banner.style.display = 'none';
-  }
-}
+function renderGlobalPredictions() {
+  const container = document.getElementById('global-predictions-list');
+  const leaderList = document.getElementById('oracle-top-list');
+  if (!container) return;
 
-function renderOracleLeaderboard() {
-  const list = document.getElementById('oracle-top-list');
-  if (!list) return;
-  const scores = state.oracleLeaderboard || {};
-  const entries = Object.entries(scores).sort((a, b) => b[1] - a[1]);
-  if (entries.length === 0) {
-    list.innerHTML = '<span style="opacity:0.6;font-style:italic;">Henüz sonuçlanan tahmin yok</span>';
+  const predictions = state.globalPredictions || [];
+  if (predictions.length === 0) {
+    container.innerHTML = '<span style="opacity:0.5;font-style:italic;font-size:10px;">Henüz tahmin girilmedi</span>';
+    if (leaderList) leaderList.innerHTML = '<span style="opacity:0.6;font-style:italic;">Tahmin bekleniyor</span>';
     return;
   }
-  list.innerHTML = entries.map(([user, wins], i) => `
-    <span style="border:1px solid var(--line);padding:2px 6px;background:var(--soft);white-space:nowrap;">
-      ${i === 0 ? '👑 ' : ''}<strong>${escapeHtml(user)}:</strong> ${wins} doğru
-    </span>
-  `).join('');
+
+  const currentTotal = state.totalPositionCount || 0;
+
+  // Mevcut toplama en yakın tahminden uzağa doğru sırala
+  const sorted = [...predictions].sort((a, b) => {
+    const diffA = Math.abs(a.guess - currentTotal);
+    const diffB = Math.abs(b.guess - currentTotal);
+    return diffA - diffB;
+  });
+
+  const best = sorted[0];
+
+  // Lider Kahin rozeti
+  if (leaderList && best) {
+    const bestDiff = Math.abs(best.guess - currentTotal);
+    leaderList.innerHTML = `
+      <span style="border:1px solid #8B5CF6;background:rgba(139,92,246,0.12);color:#8B5CF6;padding:2px 8px;font-weight:bold;white-space:nowrap;">
+        👑 ${escapeHtml(best.user)} (${best.guess} PZ | Fark: ${bestDiff})
+      </span>
+    `;
+  }
+
+  // Liste gösterimi
+  container.innerHTML = sorted.map((p, idx) => {
+    const diff = Math.abs(p.guess - currentTotal);
+    const isLeader = idx === 0;
+    const isMyGuess = p.user.toLowerCase() === (myNickname || '').toLowerCase();
+
+    let diffText = '';
+    if (p.guess === currentTotal) {
+      diffText = '<span style="color:var(--green);font-weight:bold;">TAM İSABET!</span>';
+    } else if (p.guess > currentTotal) {
+      diffText = `<span style="opacity:0.75;">+${p.guess - currentTotal} kaldı</span>`;
+    } else {
+      diffText = `<span style="opacity:0.75;">-${currentTotal - p.guess} aşıldı</span>`;
+    }
+
+    return `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 6px;border:1px solid ${isLeader ? '#8B5CF6' : 'var(--line)'};background:${isLeader ? 'rgba(139,92,246,0.08)' : 'var(--soft)'};">
+        <div style="display:flex;align-items:center;gap:6px;min-width:0;">
+          ${isLeader ? '<span style="color:#8B5CF6;">👑</span>' : `<span style="font-size:9px;opacity:0.5;">#${idx + 1}</span>`}
+          <span style="font-weight:bold;${isMyGuess ? 'color:var(--blue);' : ''}">${escapeHtml(p.user)}</span>
+          ${isMyGuess ? '<span style="font-size:8px;padding:1px 4px;border:1px solid var(--blue);color:var(--blue);">SEN</span>' : ''}
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;font-family:var(--font);font-size:10px;">
+          <strong>${p.guess} PZ</strong>
+          ${diffText}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function submitGlobalPrediction() {
+  const input = document.getElementById('global-prediction-input');
+  if (!input) return;
+  const val = parseInt(input.value);
+  if (isNaN(val) || val <= 0) {
+    alert('Lütfen geçerli bir toplam pozisyon sayısı girin (Örn: 240).');
+    return;
+  }
+
+  sendAction({
+    type: 'ADD_GLOBAL_PREDICTION',
+    guess: val
+  });
+
+  input.value = '';
 }
 
 function getActiveStudent() {
