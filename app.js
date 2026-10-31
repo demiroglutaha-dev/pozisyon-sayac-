@@ -147,11 +147,13 @@ function handleServerMessage(msg) {
     case 'INIT_STATE':
       state = msg.state;
       if (msg.clientCount) updateClientCount(msg.clientCount);
+      checkAndAutoRestore();
       renderAll();
       break;
 
     case 'STATE_UPDATED':
       state = msg.state;
+      saveClientBackup();
       renderAll();
       break;
 
@@ -898,6 +900,88 @@ function saveImportedStudents() {
   });
 
   closeImportModal();
+}
+
+// ==================== YEDEKLEME & OTOMATİK KURTARMA ====================
+function saveClientBackup() {
+  if (state.students && state.students.length > 0) {
+    const isCustom = state.students.some(s => s.count > 0) || state.students[0].name !== 'Ahmet Yılmaz';
+    if (isCustom) {
+      localStorage.setItem('pozisyon_backup_students', JSON.stringify(state.students));
+      localStorage.setItem('pozisyon_backup_total', state.totalPositionCount || 0);
+      localStorage.setItem('pozisyon_backup_predictions', JSON.stringify(state.globalPredictions || []));
+      localStorage.setItem('pozisyon_has_custom_backup', 'true');
+    }
+  }
+}
+
+function checkAndAutoRestore() {
+  const hasBackup = localStorage.getItem('pozisyon_has_custom_backup') === 'true';
+  if (!hasBackup) return;
+
+  const serverIsDefault = (state.totalPositionCount === 0 || !state.totalPositionCount) &&
+    state.students.length > 0 &&
+    state.students[0].name === 'Ahmet Yılmaz';
+
+  if (serverIsDefault) {
+    try {
+      const backupStudents = JSON.parse(localStorage.getItem('pozisyon_backup_students'));
+      const backupTotal = Number(localStorage.getItem('pozisyon_backup_total')) || 0;
+      const backupPredictions = JSON.parse(localStorage.getItem('pozisyon_backup_predictions') || '[]');
+
+      if (Array.isArray(backupStudents) && backupStudents.length > 0) {
+        console.log('🔄 Render uykudan yeni uyandı: Tarayıcıdaki veriler otomatik geri yükleniyor...');
+        sendAction({
+          type: 'RESTORE_BACKUP',
+          students: backupStudents,
+          totalPositionCount: backupTotal,
+          globalPredictions: backupPredictions
+        });
+      }
+    } catch (e) {
+      console.warn('Yedek yüklenirken hata:', e);
+    }
+  }
+}
+
+function restoreFromClientBackup() {
+  const hasBackup = localStorage.getItem('pozisyon_has_custom_backup') === 'true';
+  if (!hasBackup) {
+    alert('Tarayıcınızda kayıtlı bir yedek bulunamadı.');
+    return;
+  }
+  try {
+    const backupStudents = JSON.parse(localStorage.getItem('pozisyon_backup_students'));
+    const backupTotal = Number(localStorage.getItem('pozisyon_backup_total')) || 0;
+    const backupPredictions = JSON.parse(localStorage.getItem('pozisyon_backup_predictions') || '[]');
+
+    sendAction({
+      type: 'RESTORE_BACKUP',
+      students: backupStudents,
+      totalPositionCount: backupTotal,
+      globalPredictions: backupPredictions
+    });
+    alert('Yedek başarıyla geri yüklendi!');
+    closeImportModal();
+  } catch (e) {
+    alert('Yedek geri yüklenirken hata oluştu.');
+  }
+}
+
+function downloadJsonBackup() {
+  const backupData = {
+    date: new Date().toISOString(),
+    students: state.students,
+    totalPositionCount: state.totalPositionCount,
+    globalPredictions: state.globalPredictions || []
+  };
+  const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `pozisyon_yedek_${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 // ==================== KLAVYE KISAYOLLARI ====================
