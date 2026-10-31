@@ -538,9 +538,15 @@ function submitPrediction() {
 }
 
 function resetAllPrompt() {
-  const confirmed = confirm('DİKKAT: Tüm sayaçlar ve jüri süreleri sıfırlanacak. Onaylıyor musunuz?');
-  if (confirmed) {
-    sendAction({ type: 'RESET_ALL' });
+  const pin = prompt('⚠️ GÜVENLİK KONTROLÜ:\nTüm sayaçları sıfırlamak için şifreyi girin:');
+  if (pin === null) return;
+  if (pin.trim() === '1816') {
+    const confirmed = confirm('DİKKAT: Tüm sayaçlar ve jüri süreleri sıfırlanacak. Onaylıyor musunuz?');
+    if (confirmed) {
+      sendAction({ type: 'RESET_ALL', pin: '1816' });
+    }
+  } else {
+    alert('Hatalı şifre! Sıfırlama işlemi engellendi.');
   }
 }
 
