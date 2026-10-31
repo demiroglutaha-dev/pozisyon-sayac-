@@ -207,6 +207,88 @@ function handleServerMessage(msg) {
       }
       break;
 
+    case 'CONSENSUS_WAITING': {
+      const banner = document.getElementById('consensus-banner');
+      const text = document.getElementById('consensus-text');
+      const sublbl = document.getElementById('btn-pozisyon-sublbl');
+      
+      if (banner && text) {
+        banner.style.display = 'block';
+        if (msg.initiatedBy.toLowerCase() === myNickname.toLowerCase()) {
+          text.innerHTML = `[ 1/2 ONAY ] Sen bastın! Arkadaşının doğrulaması bekleniyor... (3 sn)`;
+          banner.style.borderColor = '#D97706';
+          banner.style.color = '#D97706';
+          if (sublbl) sublbl.textContent = '[ DİĞER BİRİ BASMALI ]';
+        } else {
+          text.innerHTML = `[ 1/2 ONAY ] <strong>${escapeHtml(msg.initiatedBy)}</strong> bastı! Onaylamak için hemen tıkla! (3 sn)`;
+          banner.style.borderColor = '#10B981';
+          banner.style.color = '#10B981';
+          if (sublbl) sublbl.textContent = '[ 2. ONAY İÇİN HEMEN TIKLA! ]';
+        }
+      }
+      playPozisyonSound(1);
+      break;
+    }
+
+    case 'CONSENSUS_CONFIRMED': {
+      state.totalPositionCount = msg.totalPositionCount;
+      state.comboStreak = msg.combo;
+      const student = state.students.find(s => s.id === msg.studentId);
+      if (student) student.count = msg.newStudentCount;
+
+      if (msg.logItem) {
+        if (!state.recentClicks) state.recentClicks = [];
+        state.recentClicks.unshift(msg.logItem);
+      }
+
+      const banner = document.getElementById('consensus-banner');
+      const text = document.getElementById('consensus-text');
+      const sublbl = document.getElementById('btn-pozisyon-sublbl');
+      if (banner && text) {
+        banner.style.display = 'block';
+        banner.style.borderColor = '#10B981';
+        banner.style.color = '#10B981';
+        text.innerHTML = `[ 2/2 ONAYLANDI ] ${escapeHtml(msg.firstUser)} & ${escapeHtml(msg.secondUser)} (+1 POZİSYON!)`;
+        setTimeout(() => {
+          banner.style.display = 'none';
+          if (sublbl) sublbl.textContent = '[ +1 SAYAC // SPACE ]';
+        }, 2200);
+      }
+
+      playPozisyonSound(msg.combo || 2);
+      showFloatingIndicator('+1 ONAYLANDI!');
+      renderActiveStudent();
+      renderStats();
+      renderPodium();
+      renderStudentsList();
+      renderActivityStream();
+      break;
+    }
+
+    case 'CONSENSUS_EXPIRED': {
+      const banner = document.getElementById('consensus-banner');
+      const text = document.getElementById('consensus-text');
+      const sublbl = document.getElementById('btn-pozisyon-sublbl');
+      if (banner && text) {
+        text.textContent = `[ ZAMAN AŞIMI ] ${escapeHtml(msg.initiatedBy)}'in pozisyonu doğrulanmadı.`;
+        banner.style.borderColor = '#6B7280';
+        banner.style.color = '#9CA3AF';
+        setTimeout(() => {
+          banner.style.display = 'none';
+          if (sublbl) sublbl.textContent = '[ +1 SAYAC // SPACE ]';
+        }, 1800);
+      }
+      break;
+    }
+
+    case 'ORACLE_ANNOUNCED': {
+      state.lastOracle = msg.result;
+      state.oracleLeaderboard = msg.oracleLeaderboard;
+      renderOracleBanner();
+      renderOracleLeaderboard();
+      break;
+    }
+
     case 'CLIENT_COUNT':
       updateClientCount(msg.count);
       break;
@@ -227,7 +309,56 @@ function renderAll() {
   renderQuickSelect();
   renderActivityStream();
   renderPredictions();
+  renderConsensusStatus();
+  renderOracleBanner();
+  renderOracleLeaderboard();
   updateTimerDisplay();
+}
+
+function toggleConsensusMode() {
+  sendAction({ type: 'TOGGLE_CONSENSUS_MODE' });
+}
+
+function renderConsensusStatus() {
+  const text = document.getElementById('consensus-status-text');
+  if (text) {
+    if (state.consensusMode) {
+      text.textContent = '2 KİŞİ ONAYI';
+      text.style.color = 'var(--blue)';
+    } else {
+      text.textContent = 'TEK TIK (KLASİK)';
+      text.style.color = 'var(--green)';
+    }
+  }
+}
+
+function renderOracleBanner() {
+  const banner = document.getElementById('oracle-banner');
+  const text = document.getElementById('oracle-winner-text');
+  if (!banner || !text) return;
+  if (state.lastOracle && state.lastOracle.winners && state.lastOracle.winners.length > 0) {
+    banner.style.display = 'block';
+    const winnersStr = state.lastOracle.winners.map(w => `<strong>${escapeHtml(w.user)}</strong> (${w.guess} PZ${w.exact ? ' - TAM İSABET!' : ''})`).join(', ');
+    text.innerHTML = `"${escapeHtml(state.lastOracle.studentName)}" için gerçek sonuç <strong>${state.lastOracle.actualCount} PZ</strong> oldu. En yakın tahmin: ${winnersStr}`;
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
+function renderOracleLeaderboard() {
+  const list = document.getElementById('oracle-top-list');
+  if (!list) return;
+  const scores = state.oracleLeaderboard || {};
+  const entries = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+  if (entries.length === 0) {
+    list.innerHTML = '<span style="opacity:0.6;font-style:italic;">Henüz sonuçlanan tahmin yok</span>';
+    return;
+  }
+  list.innerHTML = entries.map(([user, wins], i) => `
+    <span style="border:1px solid var(--line);padding:2px 6px;background:var(--soft);white-space:nowrap;">
+      ${i === 0 ? '👑 ' : ''}<strong>${escapeHtml(user)}:</strong> ${wins} doğru
+    </span>
+  `).join('');
 }
 
 function getActiveStudent() {
