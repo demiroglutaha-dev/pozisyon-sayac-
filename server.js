@@ -570,6 +570,26 @@ function handleAction(action) {
       break;
     }
 
+    case 'RESTORE_BACKUP': {
+      if (Array.isArray(action.students) && action.students.length > 0) {
+        db.students = action.students;
+        if (action.totalPositionCount !== undefined) {
+          db.totalPositionCount = Number(action.totalPositionCount) || 0;
+        } else {
+          db.totalPositionCount = db.students.reduce((acc, s) => acc + (s.count || 0), 0);
+        }
+        if (Array.isArray(action.globalPredictions)) {
+          db.globalPredictions = action.globalPredictions;
+        }
+        if (!db.students.find(s => s.id === db.activeStudentId) && db.students.length > 0) {
+          db.activeStudentId = db.students[0].id;
+        }
+        saveDatabase();
+        broadcast({ type: 'STATE_UPDATED', state: db });
+      }
+      break;
+    }
+
     case 'RESET_ALL': {
       if (action.pin !== '1816') return;
       db.students.forEach(s => {
