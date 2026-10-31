@@ -94,6 +94,7 @@ function loadDatabase() {
       if (data && data.students && Array.isArray(data.students)) {
         if (data.consensusMode === undefined) data.consensusMode = true;
         if (!data.oracleLeaderboard) data.oracleLeaderboard = {};
+        if (!data.globalPredictions) data.globalPredictions = [];
         return data;
       }
     } catch (e) {
@@ -115,6 +116,7 @@ function loadDatabase() {
     consensusPending: null,
     oracleLeaderboard: {},
     lastOracle: null,
+    globalPredictions: [],
     students: defaultStudents
   };
 
@@ -511,6 +513,28 @@ function handleAction(action) {
       break;
     }
 
+    case 'ADD_GLOBAL_PREDICTION': {
+      const guess = Number(action.guess);
+      if (isNaN(guess) || guess <= 0) return;
+
+      if (!db.globalPredictions) db.globalPredictions = [];
+      const existing = db.globalPredictions.find(p => p.user.toLowerCase() === userName.toLowerCase());
+      if (existing) {
+        existing.guess = guess;
+        existing.timestamp = now;
+      } else {
+        db.globalPredictions.push({
+          user: userName,
+          guess: guess,
+          timestamp: now
+        });
+      }
+
+      saveDatabase();
+      broadcast({ type: 'STATE_UPDATED', state: db });
+      break;
+    }
+
     case 'ADD_PREDICTION': {
       const { studentId, guess } = action;
       const student = db.students.find(s => s.id === studentId);
@@ -567,6 +591,7 @@ function handleAction(action) {
       db.consensusPending = null;
       db.lastOracle = null;
       db.oracleLeaderboard = {};
+      db.globalPredictions = [];
 
       saveDatabase();
       broadcast({ type: 'STATE_UPDATED', state: db });
