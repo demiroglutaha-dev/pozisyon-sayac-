@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>POZİSYON // JÜRİ TAKİBİ</title>
+
+  <style>
+    :root {
+      --bg: #F4F4F4;
+      --text: #111111;
+      --blue: #3F6F8F;
+      --blue-dim: rgba(63, 111, 143, 0.12);
+      --line: rgba(17, 17, 17, 0.18);
+      --soft: rgba(17, 17, 17, 0.035);
+      --font: "Courier New", Courier, monospace;
+      --red: #A33A3A;
+      --red-dim: rgba(163, 58, 58, 0.12);
+      --green: #2E7D5B;
+      --green-dim: rgba(46, 125, 91, 0.12);
+    }
+
+    body.dark-mode {
+      --bg: #111111;
+      --text: #F4F4F4;
+      --blue: #5C93B8;
+      --blue-dim: rgba(92, 147, 184, 0.14);
+      --line: rgba(244, 244, 244, 0.2);
+      --soft: rgba(255, 255, 255, 0.03);
+      --red: #D9534F;
+      --red-dim: rgba(217, 83, 79, 0.15);
+      --green: #4EAA79;
+      --green-dim: rgba(78, 170, 121, 0.15);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      line-height: 1.45;
+      display: flex;
+      justify-content: center;
+      min-height: 100vh;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    button, input, textarea, select {
+      font: inherit;
+      color: inherit;
+    }
+
+    button {
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    #app-container {
+      width: 100%;
+      max-width: 1100px;
+      min-height: 100vh;
+      border-left: 1px solid var(--line);
+      border-right: 1px solid var(--line);
+      display: flex;
+      flex-direction: column;
+      background: var(--bg);
+      position: relative;
+    }
+
+    /* Header */
+    header {
+      min-height: 62px;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+      background: var(--bg);
+    }
+
+    .brand-title {
+      font-size: 15px;
+      font-weight: bold;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-title span {
+      color: var(--blue);
+    }
+
+    .tag-badge {
+      font-size: 10px;
+      padding: 2px 6px;
+      border: 1px solid var(--line);
+      letter-spacing: 1px;
+      color: var(--blue);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-icon {
+      height: 34px;
+      padding: 0 10px;
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--line);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-size: 11px;
+      letter-spacing: 0.5px;
+      transition: 0.15s;
+    }
+
+    .btn-icon:hover {
+      border-color: var(--blue);
+      color: var(--blue);
+    }
+
+    /* Main Grid */
+    main {
+      flex: 1;
+      padding: 20px;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
+
+    @media (min-width: 860px) {
+      main {
+        grid-template-columns: 1.15fr 0.85fr;
+      }
+    }
+
+    /* Technical Cards */
+    .card {
+      border: 1px solid var(--line);
+      background: var(--soft);
+      padding: 16px;
+      margin-bottom: 16px;
+      position: relative;
+    }
+
+    .card.accent {
+      border-color: var(--blue);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+      border-bottom: 1px dashed var(--line);
+      padding-bottom: 8px;
+    }
+
+    .card-title {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: bold;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .card-title::before {
+      content: "//";
+      color: var(--blue);
+    }
+
+    .eyebrow {
+      font-size: 10px;
+      color: var(--blue);
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    /* Active Student Panel */
+    .active-name {
+      font-size: 24px;
+      font-weight: bold;
+      letter-spacing: 1px;
+      margin-bottom: 6px;
+      color: var(--text);
+    }
+
+    .status-live {
+      display: inline-block;
+      font-size: 10px;
+      padding: 3px 8px;
+      border: 1px solid var(--red);
+      color: var(--red);
+      background: var(--red-dim);
+      letter-spacing: 1px;
+      font-weight: bold;
+    }
+
+    .status-idle {
+      display: inline-block;
+      font-size: 10px;
+      padding: 3px 8px;
+      border: 1px solid var(--line);
+      color: var(--text);
+      opacity: 0.7;
+      letter-spacing: 1px;
+    }
+
+    /* Stats Row */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin: 16px 0;
+      border: 1px solid var(--line);
+      padding: 12px;
+      background: var(--bg);
+    }
+
+    .stat-box {
+      text-align: center;
+    }
+
+    .stat-box .val {
+      font-size: 18px;
+      font-weight: bold;
+      letter-spacing: 1px;
+      margin-top: 2px;
+    }
+
+    .stat-box .lbl {
+      font-size: 9px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      opacity: 0.65;
+    }
+
+    /* Main Pozisyon Button */
+    .action-arena {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 10px;
+      margin: 10px 0;
+      position: relative;
+    }
+
+    .btn-pozisyon-main {
+      width: 100%;
+      max-width: 360px;
+      padding: 32px 16px;
+      background: var(--blue);
+      color: #FFFFFF;
+      border: 2px solid var(--blue);
+      text-transform: uppercase;
+      font-size: 24px;
+      font-weight: bold;
+      letter-spacing: 3px;
+      position: relative;
+      cursor: pointer;
+      box-shadow: 4px 4px 0px var(--line);
+      transition: transform 0.05s, box-shadow 0.05s;
+      text-align: center;
+    }
+
+    .btn-pozisyon-main:active {
+      transform: translate(2px, 2px);
+      box-shadow: 2px 2px 0px var(--line);
+    }
+
+    .btn-pozisyon-main .sub-lbl {
+      display: block;
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      font-weight: normal;
+      margin-top: 4px;
+      opacity: 0.85;
+    }
+
+    .floating-count {
+      position: absolute;
+      pointer-events: none;
+      font-size: 20px;
+      font-weight: bold;
+      color: var(--blue);
+      animation: floatUp 0.8s ease-out forwards;
+      letter-spacing: 1px;
+      z-index: 50;
+    }
+
+    @keyframes floatUp {
+      0% { opacity: 1; transform: translate(-50%, 0) scale(0.9); }
+      100% { opacity: 0; transform: translate(-50%, -60px) scale(1.2); }
+    }
+
+    /* Quick Action Buttons */
+    .quick-actions {
+      display: flex;
+      gap: 8px;
+      width: 100%;
+      max-width: 360px;
+      margin-top: 14px;
+    }
+
+    .btn-action {
+      flex: 1;
+      padding: 9px 8px;
+      background: transparent;
+      border: 1px solid var(--line);
+      color: var(--text);
+      font-size: 11px;
+      letter-spacing: 0.5px;
+      text-align: center;
+      transition: 0.15s;
+    }
+
+    .btn-action:hover {
+      border-color: var(--blue);
+      color: var(--blue);
+    }
+
+    .btn-action.active-timer {
+      border-color: var(--red);
+      color: var(--red);
+      background: var(--red-dim);
+    }
+
+    .combo-pill {
+      font-size: 11px;
+      padding: 3px 10px;
+      border: 1px solid var(--blue);
+      color: var(--blue);
+      background: var(--blue-dim);
+      letter-spacing: 1px;
+      margin-bottom: 12px;
+      font-weight: bold;
+    }
+
+    /* Students List & Leaderboard */
+    .filter-row {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .input-field {
+      width: 100%;
+      padding: 8px 10px;
+      background: transparent;
+      border: 1px solid var(--line);
+      color: var(--text);
+      outline: none;
+      font-size: 11px;
+    }
+
+    .input-field:focus {
+      border-color: var(--blue);
+    }
+
+    select.input-field {
+      cursor: pointer;
+    }
+
+    .student-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      margin-bottom: 6px;
+      background: var(--bg);
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+
+    .student-item:hover {
+      border-color: var(--blue);
+    }
+
+    .student-item.active {
+      border-color: var(--blue);
+      background: var(--blue-dim);
+    }
+
+    .student-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      min-width: 0;
+    }
+
+    .student-idx {
+      font-size: 10px;
+      color: var(--blue);
+      min-width: 22px;
+    }
+
+    .student-name {
+      font-weight: bold;
+      letter-spacing: 0.3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .student-count {
+      font-size: 14px;
+      font-weight: bold;
+      letter-spacing: 1px;
+      color: var(--blue);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .student-count small {
+      font-size: 9px;
+      color: var(--text);
+      opacity: 0.6;
+      font-weight: normal;
+    }
+
+    .scroll-box {
+      max-height: 480px;
+      overflow-y: auto;
+      border-top: 1px solid var(--line);
+      padding-top: 8px;
+    }
+
+    /* Podium Cards */
+    .podium-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .podium-card {
+      border: 1px solid var(--line);
+      padding: 10px 8px;
+      text-align: center;
+      background: var(--bg);
+    }
+
+    .podium-card.first {
+      border-color: var(--blue);
+      background: var(--blue-dim);
+    }
+
+    .podium-rank {
+      font-size: 9px;
+      letter-spacing: 1px;
+      color: var(--blue);
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+
+    .podium-name {
+      font-size: 11px;
+      font-weight: bold;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .podium-val {
+      font-size: 15px;
+      font-weight: bold;
+      margin-top: 4px;
+    }
+
+    /* Activity Stream */
+    .stream-box {
+      max-height: 180px;
+      overflow-y: auto;
+      font-size: 11px;
+      border: 1px solid var(--line);
+      background: var(--bg);
+      padding: 6px;
+    }
+
+    .stream-row {
+      padding: 5px 8px;
+      border-bottom: 1px dashed var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .stream-row:last-child {
+      border-bottom: none;
+    }
+
+    /* Prediction */
+    .prediction-row {
+      display: flex;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    /* Modal */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.65);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal-box {
+      width: 100%;
+      max-width: 460px;
+      background: var(--bg);
+      border: 1px solid var(--line);
+      padding: 20px;
+      color: var(--text);
+      box-shadow: 6px 6px 0px rgba(0,0,0,0.25);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+      border-bottom: 1px dashed var(--line);
+      padding-bottom: 8px;
+      font-size: 12px;
+      letter-spacing: 1px;
+      font-weight: bold;
+    }
+
+    /* Boss Mode Screen (Disguise) */
+    #boss-screen {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: #FFFFFF;
+      color: #111111;
+      padding: 30px;
+      font-family: var(--font);
+      z-index: 9999;
+      overflow-y: auto;
+    }
+
+    #boss-screen.active {
+      display: block;
+    }
+
+    /* Utilities */
+    .text-dim { opacity: 0.65; }
+    .text-blue { color: var(--blue); }
+    .border-dashed { border-bottom: 1px dashed var(--line); }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--line);
+      padding: 12px 20px;
+      font-size: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      letter-spacing: 0.5px;
+      opacity: 0.75;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ==================== PANİK MODU (HOCA GELİYOR) ==================== -->
+  <div id="boss-screen">
+    <div style="max-width:760px;margin:0 auto;border:1px solid #ddd;padding:24px;">
+      <div style="display:flex;justify-content:space-between;border-bottom:1px solid #111;padding-bottom:8px;margin-bottom:14px;">
+        <span style="font-size:11px;letter-spacing:1px;font-weight:bold;">ARCH-402 // JÜRİ ÇALIŞMA NOTLARI</span>
+        <button onclick="toggleBossMode()" style="background:none;border:1px solid #111;font-size:10px;padding:2px 6px;">ESC / KAPAT</button>
+      </div>
+      <h1 style="font-size:16px;margin-bottom:12px;letter-spacing:0.5px;">BÖLÜM 3: STRÜKTÜREL POZİSYONLAMA VE YÜK DİYAGRAMLARI</h1>
+      <p style="font-size:11px;line-height:1.6;margin-bottom:12px;">
+        Mimari elemanların mekânsal pozisyonu, taşıyıcı sistem aksları üzerinde statik dengenin kurulmasında temel parametredir. Kolon-kiriş kesişim noktalarında moment aktarımı analiz edilmeli, pozisyonel kaymalar hesap cetvellerinde kontrol edilmelidir.
+      </p>
+      <div style="border:1px dashed #999;padding:12px;margin:12px 0;font-size:10px;background:#f9f9f9;">
+        // FORMÜL VE STATİK DENGE HESABI<br>
+        &Sigma; M_k = 0 &nbsp;|&nbsp; &Delta;p = &rho; &middot; g &middot; h &nbsp;|&nbsp; K_poz = 1.42
+      </div>
+      <p style="font-size:10px;color:#888;">(Geri dönmek için ESC tuşuna basın)</p>
+    </div>
+  </div>
+
+  <!-- ==================== ANA ÇERÇEVE ==================== -->
+  <div id="app-container">
+
+    <!-- HEADER -->
+    <header>
+      <div class="brand-title">
+        BRAVEPRINT <span>POZİSYON</span>
+        <span class="tag-badge">v1.0</span>
+      </div>
+
+      <div class="header-actions">
+        <!-- Canlı Bağlantı -->
+        <div class="btn-icon" title="Canlı bağlı kişi sayısı" style="cursor:default;">
+          <span style="width:6px;height:6px;background:var(--green);border-radius:50%;display:inline-block;"></span>
+          <span id="client-count">1</span>
+        </div>
+
+        <!-- Kullanıcı İsmi -->
+        <button class="btn-icon" onclick="changeNicknamePrompt()" title="İsmini Düzenle">
+          <span id="user-nickname-display">Sen</span>
+        </button>
+
+        <!-- Ses Aç/Kapat -->
+        <button class="btn-icon" id="sound-btn" onclick="toggleSound()" title="Ses Efekti">
+          SES: <span id="sound-status-text">AÇIK</span>
+        </button>
+
+        <!-- Tema Değiştir (Aydınlık / Karanlık) -->
+        <button class="btn-icon" onclick="toggleTheme()" title="Aydınlık/Karanlık Mod">
+          TEMA
+        </button>
+
+        <!-- Mobil QR -->
+        <button class="btn-icon" onclick="openQrModal()" style="border-color:var(--blue);color:var(--blue);font-weight:bold;">
+          [ QR / MOBİL ]
+        </button>
+
+        <!-- Panik Butonu -->
+        <button class="btn-icon" onclick="toggleBossMode()" title="Panik Modu (ESC)">
+          [ ! ]
+        </button>
+      </div>
+    </header>
+
+    <!-- MAIN BODY -->
+    <main>
+
+      <!-- SOL KOLON: AKTİF JÜRİ & POZİSYON BUTONU -->
+      <div>
+
+        <!-- AKTİF JÜRİ KARTI -->
+        <div class="card accent">
+          <div class="card-header">
+            <div class="card-title">AKTİF JÜRİ</div>
+            <div id="jury-status-badge" class="status-live">ŞU AN JÜRİDE</div>
+          </div>
+
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:12px;">
+            <div>
+              <div class="eyebrow" id="active-student-order">SIRA 01 / 35</div>
+              <div class="active-name" id="active-student-name">Ahmet Yılmaz</div>
+            </div>
+
+            <!-- Hızlı Öğrenci Değiştir Dropdown -->
+            <select id="student-quick-select" onchange="selectStudent(this.value)" class="input-field" style="width:auto;max-width:180px;">
+              <!-- JS -->
+            </select>
+          </div>
+
+          <!-- SÜRE & PPM & SAYI -->
+          <div class="stats-grid">
+            <div class="stat-box">
+              <div class="lbl">JÜRİ SÜRESİ</div>
+              <div class="val text-blue" id="jury-timer-val">00:00</div>
+            </div>
+            <div class="stat-box">
+              <div class="lbl">BU JÜRİDE</div>
+              <div class="val" id="active-student-count">0</div>
+            </div>
+            <div class="stat-box">
+              <div class="lbl">HIZ (PPM)</div>
+              <div class="val" id="active-ppm-val">0.0</div>
+            </div>
+          </div>
+
+          <!-- BÜYÜK POZİSYON BUTONU -->
+          <div class="action-arena" id="action-arena">
+            <div id="combo-pill" class="combo-pill" style="display:none;">
+              [ KOMBO 3x // ARDIŞIK SERİ ]
+            </div>
+
+            <button id="btn-pozisyon" class="btn-pozisyon-main" onclick="triggerPozisyon(1)">
+              POZİSYON
+              <span class="sub-lbl">[ +1 SAYAC // SPACE ]</span>
+            </button>
+
+            <!-- Hızlı Aksiyon Butonları -->
+            <div class="quick-actions">
+              <button class="btn-action" onclick="undoPozisyon()" title="1 Geri Al">
+                [ -1 GERİ ]
+              </button>
+              <button class="btn-action" onclick="triggerPozisyon(5)" title="Peş peşe 5 pozisyon">
+                [ +5 SERİ ]
+              </button>
+              <button class="btn-action" id="timer-toggle-btn" onclick="toggleJuryTimer()">
+                [ SÜREYİ BAŞLAT ]
+              </button>
+              <button class="btn-action" onclick="nextStudent()" title="Sıradaki Öğrenciye Geç">
+                [ SIRADAKİ &gt; ]
+              </button>
+            </div>
+          </div>
+
+          <!-- TAHMİN / BAHİS BÖLÜMÜ -->
+          <div style="border-top:1px dashed var(--line);padding-top:12px;margin-top:10px;">
+            <div class="eyebrow">TAHMİN // BU JÜRİDE KAÇ POZİSYON OLUR?</div>
+            <div class="prediction-row">
+              <input type="number" id="prediction-input" placeholder="Tahmin (Örn: 8)" class="input-field" style="width:140px;">
+              <button class="btn-action" onclick="submitPrediction()" style="border-color:var(--blue);color:var(--blue);font-weight:bold;">
+                KAYDET
+              </button>
+              <div id="predictions-stream" style="flex:1;display:flex;gap:6px;overflow-x:auto;align-items:center;font-size:10px;">
+                <!-- JS -->
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- CANLI AKIŞ KARTI -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">CANLI İŞLEM KAYITLARI</div>
+            <span style="font-size:10px;opacity:0.6;">ANLIK SENKRONİZE</span>
+          </div>
+          <div class="stream-box" id="live-activity-stream">
+            <div style="padding:12px;text-align:center;opacity:0.5;">Kayıt bulunmuyor.</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- SAĞ KOLON: KÜRSÜ & ÖĞRENCİ LİSTESİ -->
+      <div>
+
+        <!-- KÜRSÜ (TOP 3) -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">LİDERLİK KÜRSÜSÜ</div>
+            <span style="font-size:10px;color:var(--blue);font-weight:bold;">ZİRVEDEKİLER</span>
+          </div>
+
+          <div class="podium-grid">
+            <div class="podium-card" id="podium-2">
+              <div class="podium-rank">[ #2 ]</div>
+              <div class="podium-name" id="podium-2-name">-</div>
+              <div class="podium-val" id="podium-2-val">0</div>
+            </div>
+            <div class="podium-card first" id="podium-1">
+              <div class="podium-rank">[ #1 KRAL ]</div>
+              <div class="podium-name text-blue" id="podium-1-name">-</div>
+              <div class="podium-val text-blue" id="podium-1-val">0</div>
+            </div>
+            <div class="podium-card" id="podium-3">
+              <div class="podium-rank">[ #3 ]</div>
+              <div class="podium-name" id="podium-3-name">-</div>
+              <div class="podium-val" id="podium-3-val">0</div>
+            </div>
+          </div>
+
+          <!-- GENEL İSTATİSTİK -->
+          <div style="display:flex;justify-content:space-between;border-top:1px dashed var(--line);padding-top:10px;font-size:11px;">
+            <div>TOPLAM: <strong class="text-blue" id="stat-total-val">0</strong></div>
+            <div>ORTALAMA: <strong id="stat-avg-val">0.0</strong></div>
+            <div>ÖĞRENCİ: <strong id="stat-students-count">35</strong></div>
+          </div>
+        </div>
+
+        <!-- ÖĞRENCİ LİSTESİ -->
+        <div class="card" style="margin-bottom:0;">
+          <div class="card-header">
+            <div class="card-title">ÖĞRENCİLER (<span id="students-header-count">35</span>)</div>
+            <div style="display:flex;gap:6px;">
+              <button class="btn-action" onclick="openImportModal()" style="padding:4px 8px;font-size:10px;">
+                + LİSTE YÜKLE
+              </button>
+              <a href="/api/export/csv" class="btn-action" style="padding:4px 8px;font-size:10px;text-decoration:none;" download>
+                CSV
+              </a>
+              <button class="btn-action" onclick="resetAllPrompt()" style="padding:4px 8px;font-size:10px;color:var(--red);border-color:var(--red);" title="Tümünü Sıfırla">
+                SIFIRLA
+              </button>
+            </div>
+          </div>
+
+          <!-- Filtreleme & Arama -->
+          <div class="filter-row">
+            <input type="text" id="search-input" oninput="renderStudentsList()" placeholder="Öğrenci ara..." class="input-field" style="flex:1;">
+            <select id="sort-select" onchange="renderStudentsList()" class="input-field" style="width:140px;">
+              <option value="order">Sıraya Göre</option>
+              <option value="count-desc">En Çok Pozisyon</option>
+              <option value="count-asc">En Az Pozisyon</option>
+              <option value="ppm-desc">Hıza Göre (PPM)</option>
+            </select>
+          </div>
+
+          <!-- Liste Kutusu -->
+          <div class="scroll-box" id="students-list-container">
+            <!-- JS -->
+          </div>
+        </div>
+
+      </div>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer>
+      <div>BRAVEPRINT // POZİSYON JÜRİ TAKİP PLATFORMU</div>
+      <div>BOŞLUK: [ SAYAC ] &nbsp;|&nbsp; ESC: [ PANİK MODU ]</div>
+    </footer>
+
+  </div>
+
+  <!-- ==================== QR KOD MODALI ==================== -->
+  <div id="qr-modal" class="modal-backdrop">
+    <div class="modal-box">
+      <div class="modal-header">
+        <span>[ MOBİL ERİŞİM & QR ]</span>
+        <button onclick="closeQrModal()" class="btn-action" style="padding:2px 8px;">KAPAT</button>
+      </div>
+
+      <p style="font-size:11px;margin-bottom:14px;opacity:0.8;">
+        Aynı Wi-Fi ağına bağlı herkes telefon kamerasını tutarak jüri sayacına anlık katılabilir ve pozisyon sayabilir:
+      </p>
+
+      <div style="text-align:center;margin-bottom:14px;">
+        <img id="qr-img" src="" alt="QR KOD" style="max-width:210px;border:1px solid var(--line);background:#fff;padding:6px;display:inline-block;">
+      </div>
+
+      <div style="display:flex;gap:6px;border:1px solid var(--line);padding:8px;background:var(--soft);">
+        <input type="text" id="qr-url-input" readonly class="input-field" style="font-size:11px;border:none;padding:0;">
+        <button onclick="copyQrUrl()" class="btn-action" style="padding:4px 10px;font-size:10px;">
+          KOPYALA
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== TOPLU ÖĞRENCİ LİSTESİ MODALI ==================== -->
+  <div id="import-modal" class="modal-backdrop">
+    <div class="modal-box" style="max-width:540px;">
+      <div class="modal-header">
+        <span>[ TOPLU ÖĞRENCİ LİSTESİ YÜKLE ]</span>
+        <button onclick="closeImportModal()" class="btn-action" style="padding:2px 8px;">KAPAT</button>
+      </div>
+
+      <p style="font-size:11px;margin-bottom:10px;opacity:0.8;">
+        Sınıf listenizi veya jüri sıralamasını alt alta yapıştırın. Her satır bir öğrenci kabul edilir:
+      </p>
+
+      <textarea id="import-textarea" rows="10" class="input-field" style="resize:vertical;min-height:160px;font-size:11px;margin-bottom:10px;"></textarea>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <button onclick="fillSampleStudents()" style="background:none;border:none;color:var(--blue);font-size:10px;text-decoration:underline;">
+          Örnek 35 Öğrenci Doldur
+        </button>
+        <div style="display:flex;gap:6px;">
+          <button onclick="closeImportModal()" class="btn-action" style="padding:6px 12px;">İPTAL</button>
+          <button onclick="saveImportedStudents()" class="btn-action" style="padding:6px 14px;border-color:var(--blue);background:var(--blue);color:#fff;">
+            LİSTEYİ KAYDET
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
